@@ -1,0 +1,62 @@
+
+fn parent_processes(id: u32) -> Vec<u32> {
+    let mut parent_pids: Vec<u32> = Vec::new();
+
+    //ps -u $USER -o ppid={}
+
+    let parent_procs = process::Command::new("ps")
+        .arg("-o")
+        .arg(format!("ppid={}", id))
+        .output();
+
+    let output2 = String::from_utf8_lossy(&parent_procs.unwrap().stdout).to_string();
+
+    for pid in output2.split("\n") {
+        match pid.trim().parse::<u32>() {
+            Ok(p) => parent_pids.push(p),
+            Err(_) => ()
+        }
+    }
+
+    return parent_pids;
+}
+
+
+
+fn muf() -> std::io::Result<()> {
+    let mut f = File::create("fooooo.txt")?;
+    f.write_all(b"Hello, world!")?;
+
+    Ok(())
+}
+
+    //ps u -N -u root for all non-root processes
+
+const LINUX_PF_KTHREAD_FLAG: u32 = 0x00200000;
+
+fn process_killer() {
+    let proc_id = process::id() as i32;
+
+    let os = env::consts::OS; //TODO: check if linux
+
+    let pr = procfs::process::all_processes().unwrap();
+
+    for x in pr {
+        let pid = x.as_ref().unwrap().pid as i32;
+        let stat = x.as_ref().unwrap().stat().unwrap();
+        if (stat.flags != LINUX_PF_KTHREAD_FLAG) && (pid != proc_id) {
+            signal::kill(Pid::from_raw(pid), Signal::SIGTERM).unwrap_or_else(|e| {
+                println!("Could not terminate: {}", e);
+            });
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
